@@ -1,0 +1,53 @@
+#Основной файл, где прописана группа хостов и их файлы с задачами.
+---
+- name: Master
+  hosts: localhost
+  gather_facts: false
+  vars:
+    file: "svorthanc.exe"
+  tasks:
+  - name: Download the archive from FTP to Master
+    get_url:
+      url: "{{ ftp_url_master }}{{ file }}"
+      dest: "{{ dest_download }}{{ file }}"
+#file - название файла, который мы забираем с FTP
+  
+- name: Connecting host files hospital and hospital_FTP
+  hosts: hospital:hospital_FTP
+  gather_facts: no
+#  serial: 5
+  strategy: free
+  tasks:
+   - name: KILL svorthanc.exe
+     win_command: taskkill /IM svorthanc.exe /F   
+     ignore_errors: yes
+     
+   - include: '/root/ansible/download/Hosts_upd/{{inventory_hostname}}.yml'
+     with_items:
+      - {dest: '/cgi-bin/svorthanc.exe', file: 'svorthanc.exe'}
+#dest - путь до файла (/js/... или /cgi-bin/...) + название файла
+#file - название файла 
+
+- name: Send message to Telegram
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    file: "svorthanc.exe"
+  tasks:
+    - name: Prepare message
+      set_fact:
+        telegram_message: |
+          Файл #{{ file }} обновлен ✅
+          
+    - name: Send message
+      uri:
+        url: "https://api.telegram.org/{{token_tg}}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ chat_id_tg }}"
+          text: "{{ telegram_message }}"
+          parse_mode: "HTML"
+      run_once: true
+      tags:
+      - skip_message

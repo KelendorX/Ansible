@@ -1,0 +1,120 @@
+---
+- name: Check for availability {{ item.file }} in {{ www_root }}{{ item.dest }}
+  win_stat:
+    path: "{{ www_root }}{{ item.dest }}"
+  register: stat_results1
+  
+- name: Check for availability {{ item.file }} in {{ www_root_2 }}{{ item.dest }}
+  win_stat:
+    path: "{{ www_root_2 }}{{ item.dest }}"
+  register: stat_results2
+
+- name: Check for availability {{ item.file }} in {{ www_root_3 }}{{ item.dest }}
+  win_stat:
+    path: "{{ www_root_3 }}{{ item.dest }}"
+  register: stat_results3
+
+- name: Check for availability {{ item.file }} in {{ www_root_4 }}{{ item.dest }}
+  win_stat:
+    path: "{{ www_root_4 }}{{ item.dest }}"
+  register: stat_results4
+
+- name: Check for availability {{ item.file }} in {{ www_root_5 }}{{ item.dest }}
+  win_stat:
+    path: "{{ www_root_5 }}{{ item.dest }}"
+  register: stat_results5
+
+- name: Check for availability {{ item.file }} in {{ www_root_6 }}{{ item.dest }}
+  win_stat:
+    path: "{{ www_root_6 }}{{ item.dest }}"
+  register: stat_results6
+
+- name: Check for availability {{ item.file }} in {{ www_root_7 }}{{ item.dest }}
+  win_stat:
+    path: "{{ www_root_7 }}{{ item.dest }}"
+  register: stat_results7
+
+- name: Check for availability {{ item.file }} in {{ www_root_8 }}{{ item.dest }}
+  win_stat:
+    path: "{{ www_root_8 }}{{ item.dest }}"
+  register: stat_results8
+
+- name: We are updating {{ item.file }} in {{ www_root }}{{ item.dest }}, if the file is not there, then skip it
+  win_copy:
+    src: "/root/ansible/download/files/{{ item.file }}"
+    dest: "{{ www_root }}{{ item.dest }}"
+  when: stat_results1.stat.exists
+  retries: 10
+  delay: 2
+  register: result
+  until: result is not failed 
+  
+- name: We are updating {{ item.file }} in {{ www_root_2 }}{{ item.dest }}, if the file is not there, then skip it
+  win_copy:
+    src: "/root/ansible/download/files/{{ item.file }}"
+    dest: "{{ www_root_2 }}{{ item.dest }}"
+  when: stat_results2.stat.exists
+  retries: 10
+  delay: 2
+  register: result
+  until: result is not failed 
+  
+- name: We are updating {{ item.file }} in {{ www_root_3 }}{{ item.dest }}, if the file is not there, then skip it
+  win_copy:
+    src: "/root/ansible/download/files/{{ item.file }}"
+    dest: "{{ www_root_3 }}{{ item.dest }}"
+  when: stat_results3.stat.exists
+  retries: 10
+  delay: 2
+  register: result
+  until: result is not failed 
+    
+- name: We are updating {{ item.file }} in {{ www_root_4 }}{{ item.dest }}, if the file is not there, then skip it
+  win_copy:
+    src: "/root/ansible/download/files/{{ item.file }}"
+    dest: "{{ www_root_4 }}{{ item.dest }}"
+  when: stat_results4.stat.exists
+  retries: 10
+  delay: 2
+  register: result
+  until: result is not failed 
+    
+- name: We are updating {{ item.file }} in {{ www_root_5 }}{{ item.dest }}, if the file is not there, then skip it
+  win_copy:
+    src: "/root/ansible/download/files/{{ item.file }}"
+    dest: "{{ www_root_5 }}{{ item.dest }}"
+  when: stat_results5.stat.exists
+  retries: 10
+  delay: 2
+  register: result
+  until: result is not failed 
+    
+- name: We are updating {{ item.file }} in {{ www_root_6 }}{{ item.dest }}, if the file is not there, then skip it
+  win_copy:
+    src: "/root/ansible/download/files/{{ item.file }}"
+    dest: "{{ www_root_6 }}{{ item.dest }}"
+  when: stat_results6.stat.exists
+  retries: 10
+  delay: 2
+  register: result
+  until: result is not failed 
+    
+- name: We are updating {{ item.file }} in {{ www_root_7 }}{{ item.dest }}, if the file is not there, then skip it
+  win_copy:
+    src: "/root/ansible/download/files/{{ item.file }}"
+    dest: "{{ www_root_7 }}{{ item.dest }}"
+  when: stat_results7.stat.exists
+  retries: 10
+  delay: 2
+  register: result
+  until: result is not failed 
+    
+- name: We are updating {{ item.file }} in {{ www_root_8 }}{{ item.dest }}, if the file is not there, then skip it
+  win_copy:
+    src: "/root/ansible/download/files/{{ item.file }}"
+    dest: "{{ www_root_8 }}{{ item.dest }}"
+  when: stat_results8.stat.exists
+  retries: 10
+  delay: 2
+  register: result
+  until: result is not failed

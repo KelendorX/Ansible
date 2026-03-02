@@ -1,0 +1,16 @@
+---   
+- name: Распаковка архива in "{{ www_root }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root }}{{ item.path }}"
+
+- name: Распаковка архива in "{{ www_root_2 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_2 }}{{ item.path }}"
+
+- name: Распаковка архива in "{{ www_root_3 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_3 }}{{ item.path }}"
+    delete_archive: yes

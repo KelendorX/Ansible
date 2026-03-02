@@ -1,0 +1,88 @@
+---
+- name: Master
+  hosts: localhost
+  gather_facts: false
+  vars:
+    archive: "CDA.zip"
+  tasks:
+  - name: Download the archive from FTP to Master
+    get_url:
+      url: "{{ ftp_url_master }}{{ archive }}"
+      dest: "{{ dest_download }}{{ archive }}"
+      
+  - name: Get ZIP archive contents
+    unarchive:
+      src: "{{ dest_download }}{{ archive }}"
+      dest: "{{ dest_download }}zip_inspection/"
+      list_files: yes
+    register: zip_contents
+    check_mode: yes
+
+- name: Connecting host files hospital
+  hosts: hospital
+  ignore_errors: yes
+  gather_facts: no
+  strategy: free
+  vars:
+    archive: "CDA.zip"
+  tasks:
+   - name: Download the archive in {{ansible}}
+     win_copy:
+       src: "{{ dest_download }}{{ archive }}"
+       dest: "{{ ansible }}/"
+       
+   - include: '/root/ansible/download/Hosts_arx/{{inventory_hostname}}.yml'
+     with_items:
+      - {path: '/cgi-bin/typeplan/', dest: '/cgi-bin/typeplan/CDA.zip', file: 'CDA.zip'}
+
+- name: Connecting host files hospital_FTP
+  hosts: hospital_FTP
+  ignore_errors: yes
+  gather_facts: no
+  vars:
+    archive: "CDA.zip"
+  tasks:
+   - name: Download the archive in {{ansible}}
+     win_get_url:
+       url: {{ ftp_url }}{{ archive }}
+       dest: "{{ ansible }}/"
+       url_username: {{ ftp_username }}
+       url_password: {{ ftp_password }}
+       
+   - include: '/root/ansible/download/Hosts_arx/{{inventory_hostname}}.yml'
+     with_items:
+      - {path: '/cgi-bin/typeplan/', dest: '/cgi-bin/typeplan/CDA.zip', file: 'CDA.zip'}
+
+- name: Deleting a file on a local machine and Send message to Telegram
+  hosts: localhost
+  gather_facts: false
+  vars:
+    archive: "CDA.zip"
+  tasks:
+    - name: Delete the file
+      file:
+        path: "{{ dest_download }}{{ archive }}"
+        state: absent
+        
+    - name: Prepare message
+      set_fact:
+        telegram_message: |
+          ������Содержимое архива: #{{ archive }}
+          
+          ������Файлы в архиве:
+          {% for file in zip_contents.files %}
+          • {{ file }}
+          {% endfor %}
+          
+    - name: Send message
+      uri:
+        url: "https://api.telegram.org/{{token_tg}}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ chat_id_tg }}"
+          text: "{{ telegram_message }}"
+          parse_mode: "HTML"
+      run_once: true
+      tags:
+      - skip_message

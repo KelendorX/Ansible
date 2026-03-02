@@ -1,0 +1,87 @@
+---
+- name: Master
+  hosts: localhost
+  gather_facts: false
+  tasks:
+  - name: Скачиваем архив с FTP на Master
+    get_url:
+      url: {{ ftp_url_master }}{{ item.file }}
+      dest: "{{ dest_download }}{{ item.file }}"
+    with_items:
+      - {file: 'dotnet-hosting-8.0.13-win.exe'}
+      - {file: 'dotnet-runtime-8.0.13-win-x64.exe'}
+           
+- name: update .net MASTER
+  hosts: hospital
+  gather_facts: false #пропускаем ping всех машин.
+  ignore_errors: yes #если произойдет ошибка во время выполнения задания, то остановки не будет.
+  strategy: free
+  #serial: 1
+  tasks:
+  - name: Скачиваем dotnet-install в {{ansible}}
+    win_copy:
+       src: "{{ dest_download }}{{ item.file }}"
+       dest: "{{ ansible }}/"
+    with_items:
+       - {file: 'dotnet-hosting-8.0.13-win.exe'}
+       - {file: 'dotnet-runtime-8.0.13-win-x64.exe'}
+          
+  - name: Run basic PowerShell script 1
+    ansible.windows.win_powershell:
+      script: |
+        cd {{ansible}}
+        .\dotnet-runtime-8.0.13-win-x64.exe /install /quiet /norestart
+        
+  - name: Run basic PowerShell script 2
+    ansible.windows.win_powershell:
+      script: |
+        cd {{ansible}}
+        .\dotnet-hosting-8.0.13-win.exe /install /quiet /norestart
+        
+  - name: Удаляем файл dotnet-hosting-8.0.13-win
+    win_file:
+      path: "{{ ansible }}/dotnet-hosting-8.0.13-win.exe"
+      state: absent
+
+  - name: Удаляем файл dotnet-runtime-8.0.13-win-x64
+    win_file:
+      path: "{{ ansible }}/dotnet-runtime-8.0.13-win-x64.exe"
+      state: absent
+
+- name: update .net FTP
+  hosts: hospital_FTP
+  gather_facts: false 
+  ignore_errors: yes 
+  strategy: free
+  tasks:  
+  - name: Забираем файл с FTP
+    win_get_url:
+      url: {{ ftp_url }}{{ item.file }}
+      dest: "{{ansible}}" 
+      url_username: {{ ftp_username }}
+      url_password: {{ ftp_password }}
+    with_items:
+      - {file: 'dotnet-hosting-8.0.13-win.exe'}
+      - {file: 'dotnet-runtime-8.0.13-win-x64.exe'}
+          
+  - name: Run basic PowerShell script 1
+    ansible.windows.win_powershell:
+      script: |
+        cd {{ansible}}
+        .\dotnet-hosting-8.0.13-win.exe /install /quiet /norestart
+        
+  - name: Run basic PowerShell script 2
+    ansible.windows.win_powershell:
+      script: |
+        cd {{ansible}}
+        .\dotnet-runtime-8.0.13-win-x64.exe /install /quiet /norestart
+
+  - name: Удаляем файл dotnet-runtime-8.0.13-win-x64.exe
+    win_file:
+      path: "{{ ansible }}/dotnet-runtime-8.0.13-win-x64.exe"
+      state: absent
+
+  - name: Удаляем файл dotnet-hosting-8.0.13-win.exe
+    win_file:
+      path: "{{ ansible }}/dotnet-hosting-8.0.13-win.exe"
+      state: absent

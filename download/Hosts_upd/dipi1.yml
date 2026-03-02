@@ -1,0 +1,15 @@
+---
+- name: Check for availability {{ item.file }} in {{ www_root }}{{ item.dest }}
+  win_stat:
+    path: "{{ www_root }}{{ item.dest }}"
+  register: stat_results1
+   
+- name: We are updating {{ item.file }} in {{ www_root }}{{ item.dest }}, if the file is not there, then skip it
+  win_copy:
+    src: "/root/ansible/download/files/{{ item.file }}"
+    dest: "{{ www_root }}{{ item.dest }}"
+  when: stat_results1.stat.exists
+  retries: 10
+  delay: 2
+  register: result
+  until: result is not failed

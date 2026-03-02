@@ -1,0 +1,230 @@
+---
+- name: Master
+  hosts: local
+  gather_facts: false
+  vars:
+    archive: "SendedAPIDeploy.zip"
+    archive_linux: "SendedAPIDeployLinux.zip"
+  tasks:
+  - name: Download SendedAPIDeploy from FTP to Master
+    get_url:
+      url: "{{ftp_url_master_releases}}{{ archive }}"
+      dest: "{{ dest_sendedapi }}{{ archive }}"
+      
+  - name: Download SendedAPIDeployLinux from FTP to Master
+    get_url:
+      url: "{{ftp_url_master_releases}}{{ archive_linux }}"
+      dest: "{{ dest_sendedapi }}{{ archive_linux }}"
+
+- name: Sendedapi_Master_IIS 
+  hosts: hospital
+  gather_facts: false #пропускаем ping всех машин.
+  ignore_errors: yes #если произойдет ошибка во время выполнения задания, то остановки не будет.
+  strategy: free
+  vars:
+    archive: "SendedAPIDeploy.zip"
+  tasks: 
+  - name: Get the archive from Master
+    win_copy:
+      src: "{{ dest_sendedapi }}{{ archive }}"
+      dest: "{{sendedapi}}/" 
+        
+  - name: Stopping the IIS pool
+    win_iis_webapppool:
+      name: sendedapi
+      state: stopped
+      
+  - name: KILL SQLITESTUDIO
+    win_command: taskkill /IM sqlitestudio.exe /F
+      
+  - name: Unpacking an archive and then deleting it
+    win_unzip:
+      src: "{{sendedapi}}/{{ archive }}"
+      dest: "{{sendedapi}}/"
+      delete_archive: yes
+    retries: 10
+    delay: 2
+    register: result
+    until: result is not failed 
+      
+  - name: Running a script for database changes
+    win_shell: "{{sendedapi}}/sql/script.bat"
+    args:
+      chdir: "{{sendedapi}}/sql"
+      
+  - name: Starting the IIS pool
+    win_iis_webapppool:
+      name: sendedapi
+      state: started 
+             
+- name: Sendedapi_Master_service 
+  hosts: hospital_service
+  gather_facts: false 
+  ignore_errors: yes 
+  strategy: free
+  vars:
+    archive: "SendedAPIDeploy.zip"
+  tasks:  
+  - name: Get the archive from Master
+    win_copy:
+      src: "{{ dest_sendedapi }}{{ archive }}"
+      dest: "{{sendedapi}}/"
+    register: copy_result
+     
+  - name: Get the archive from FTP if Master failed
+    win_get_url:
+      url: "{{ ftp_url_releases }}{{ archive }}"
+      dest: "{{sendedapi}}/" 
+      url_username: "{{ ftp_username }}"
+      url_password: "{{ ftp_password }}"
+    when: copy_result is failed      
+      
+  - name: Service stop
+    win_service:
+      name: "{{ service_name | default('sendedapi') }}"
+      state: stopped      
+    
+  - name: KILL SQLITESTUDIO
+    win_command: taskkill /IM sqlitestudio.exe /F
+          
+  - name: Unpacking an archive and then deleting it
+    win_unzip:
+      src: "{{sendedapi}}/{{ archive }}"
+      dest: "{{sendedapi}}"
+      delete_archive: yes
+    retries: 10
+    delay: 2
+    register: result
+    until: result is not failed 
+      
+  - name: Running a script for database changes
+    win_shell: "{{sendedapi}}/sql/script.bat"
+    args:
+      chdir: "{{sendedapi}}/sql"
+  
+  - name: Service startup
+    win_service:
+      name: "{{ service_name | default('sendedapi') }}"
+      state: started
+
+- name: SendedApiTestContour 
+  hosts: SendedApiTestContour
+  gather_facts: false 
+  ignore_errors: yes 
+  strategy: free
+  vars:
+    archive: "SendedAPIDeploy.zip"
+  tasks:  
+  - name: Get the archive from Master
+    win_copy:
+      src: "{{ dest_sendedapi }}{{ archive }}"
+      dest: "{{sendedapi}}/"
+    register: copy_result
+     
+  - name: Get the archive from FTP if Master failed
+    win_get_url:
+      url: "{{ ftp_url_releases }}{{ archive }}"
+      dest: "{{sendedapi}}/" 
+      url_username: "{{ ftp_username }}"
+      url_password: "{{ ftp_password }}"
+    when: copy_result is failed     
+      
+  - name: Service stop
+    win_service:
+      name: SendedApiTestContour
+      state: stopped      
+    
+  - name: KILL SQLITESTUDIO
+    win_command: taskkill /IM sqlitestudio.exe /F
+          
+  - name: Unpacking an archive and then deleting it
+    win_unzip:
+      src: "{{sendedapi}}/{{ archive }}"
+      dest: "{{sendedapi}}"
+      delete_archive: yes
+    retries: 10
+    delay: 2
+    register: result
+    until: result is not failed 
+      
+  - name: Running a script for database changes
+    win_shell: "{{sendedapi}}/sql/script.bat"
+    args:
+      chdir: "{{sendedapi}}/sql"
+  
+  - name: Service startup
+    win_service:
+      name: SendedApiTestContour
+      state: started
+      
+- name: Sendedapi_linux 
+  hosts: hospital_linux
+  gather_facts: false 
+  ignore_errors: yes
+  become: yes
+  vars:
+    archive_linux: "SendedAPIDeployLinux.zip"
+  tasks:  
+  - name: Get the archive from Master
+    win_copy:
+      src: "{{ dest_sendedapi }}{{ archive_linux }}"
+      dest: "{{sendedapi}}/"
+    register: copy_result
+      
+  - name: Stopped service sendedapi
+    ansible.builtin.service:
+      name: sendedapi.service
+      state: stopped
+      
+  - name: Unpacking the archive
+    ansible.builtin.unarchive:
+      src: "{{sendedapi}}/{{ archive_linux }}"
+      dest: "{{sendedapi}}"
+      remote_src: yes  # Архив находится на целевом хосте
+      keep_newer: yes
+    
+  - name: Deleting an archive after unpacking
+    ansible.builtin.file:
+      path: "{{ sendedapi }}/{{ archive_linux }}"
+      state: absent
+    
+  - name: Give permissions to run the file (chmod +x)
+    ansible.builtin.file:
+      path: "{{sendedapi}}/SendedAPI"
+      mode: "0755"  # Владелец: rwx (7), группа: r-x (5), остальные: r-x (5)
+      state: file
+    
+  - name: started service sendedapi
+    ansible.builtin.service:
+      name: sendedapi.service
+      state: started
+      
+- name: Send message to Telegram
+  hosts: local
+  gather_facts: yes
+  tasks:
+    - name: Call version API
+      uri:
+        url: "{{ check_ver_sendedapi }"
+        method: GET
+        return_content: yes
+      register: api_result
+      
+    - name: Prepare message
+      set_fact:
+        telegram_message: |
+          Модуль #sendedapi обновлен ✅
+          Версия: {{ api_result.content }}
+          
+    - name: Send message
+      uri:
+        url: "https://api.telegram.org/{{ token_tg }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ chat_id_tg }}" #ID чата Ansible VSD
+          text: "{{ telegram_message }}"
+          parse_mode: "HTML"
+      run_once: true
+      tags:
+      - skip_message

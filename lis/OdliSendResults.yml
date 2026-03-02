@@ -1,0 +1,53 @@
+---
+- name: Master
+  hosts: localhost
+  gather_facts: false
+  vars:
+    archive: "{{ archive }}"
+  tasks:
+  - name: Скачиваем архив с FTP на Master
+    get_url:
+      url: "{{ ftp_url_master }}{{ archive }}"
+      dest: "{{ dest_download }}{{ archive }}"
+          
+- name: lis_Master 
+  hosts: hospital_lis
+  gather_facts: false #пропускаем ping всех машин.
+  ignore_errors: yes #если произойдет ошибка во время выполнения задания, то остановки не будет.
+  strategy: free
+  #serial: 1
+  tasks:
+  - name: Get the archive from Master in lis_1 directory
+    win_copy:
+      src: "/root/ansible/lis/zip/{{ archive }}"
+      dest: "{{lis_1}}/"
+
+  - name: Get the archive from Master in lis_2 directory (if exists)
+    win_copy:
+      src: "/root/ansible/lis/zip/{{ archive }}"
+      dest: "{{ lis_2 | default('') }}/"
+    when: lis_2 is defined 
+ 
+  - name: KILL OdliSendResults
+    win_command: taskkill /IM OdliSendResults.exe /F 
+
+  - name: Unpacking an archive and then deleting it in lis_1 directory
+    win_unzip:
+      src: "{{lis_1}}/{{ archive }}"
+      dest: "{{lis_1}}/"
+      delete_archive: yes
+    retries: 50
+    delay: 4
+    register: result
+    until: result is not failed
+        
+  - name: Unpacking an archive and then deleting it in lis_2 directory (if exists)
+    win_unzip:
+      src: "{{lis_2}}/{{ archive }}"
+      dest: "{{ lis_2 | default('') }}/"
+      delete_archive: yes
+    retries: 50
+    delay: 4
+    register: result
+    until: result is not failed
+    when: lis_2 is defined

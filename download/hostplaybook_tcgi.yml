@@ -1,0 +1,59 @@
+#Основной файл, где прописана группа хостов и их файлы с задачами.
+---
+- name: Master
+  hosts: localhost
+  gather_facts: false
+  vars:
+    file: "tcgi1.exe"
+  tasks:
+  - name: Download the archive from FTP to Master
+    get_url:
+      url: "{{ ftp_url_master }}{{ file }}"
+      dest: "{{ dest_download }}{{ file }}"
+      
+- name: Connecting host files hospital and hospital_FTP
+  hosts: hospital:hospital_FTP
+  gather_facts: no
+#  serial: 5
+  strategy: free
+  tasks:
+   - include: '/root/ansible/download/Hosts_upd_tcgi/{{inventory_hostname}}.yml'
+     with_items:
+      - {patterns: ['tcgi*.exe']}
+     loop_control:
+        loop_var: tcgi
+
+- name: Send message to Telegram
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    file: "tcgi1.exe"
+  tasks:
+    - name: Download HTML page
+      uri:
+        url: "{{ check_ver }}{{ file }}?GETVERSION"
+        return_content: yes
+      register: html_page
+
+    - name: Extract version using direct pattern matching
+      set_fact:
+        current_version: "{{ html_page.content }}"
+        
+    - name: Prepare message
+      set_fact:
+        telegram_message: |
+          Файл #{{ file }} обновлен ✅
+          Версия: {{ current_version }}
+
+    - name: Send message
+      uri:
+        url: "https://api.telegram.org/{{token_tg}}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ chat_id_tg }}"
+          text: "{{ telegram_message }}"
+          parse_mode: "HTML"
+      run_once: true
+      tags:
+      - skip_message

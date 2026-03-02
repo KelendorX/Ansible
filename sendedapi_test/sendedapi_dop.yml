@@ -1,0 +1,101 @@
+---
+- name: Master
+  hosts: localhost
+  gather_facts: false
+  vars:
+    archive: "sapart.zip"
+  tasks:
+  - name: Download sapart from FTP to Master
+    get_url:
+      url: "{{ ftp_url_master_releases }}{{ archive }}"
+      dest: "{{ dest_sendedapi }}{{ archive }}"
+               
+- name: Sapart_Master 
+  hosts: hospital
+  gather_facts: false #пропускаем ping всех машин.
+  ignore_errors: yes #если произойдет ошибка во время выполнения задания, то остановки не будет.
+  strategy: free
+  vars:
+    archive: "sapart.zip"
+  tasks: 
+  - name: Get the archive from Master
+    win_copy:
+      src: "{{ dest_sendedapi }}{{ archive }}"
+      dest: "{{sendedapi}}/" 
+
+  - name: Unpacking an archive and then deleting it
+    win_unzip:
+      src: "{{sendedapi}}/{{ archive }}"
+      dest: "{{sendedapi}}/"
+      delete_archive: yes
+    retries: 10
+    delay: 2
+    register: result
+    until: result is not failed 
+      
+  - name: Running a script for database changes
+    win_shell: "{{sendedapi}}/sql/script.bat"
+    args:
+      chdir: "{{sendedapi}}/sql"
+        
+- name: SapartSendedapi_Master_service 
+  hosts: hospital_service
+  gather_facts: false 
+  ignore_errors: yes 
+  strategy: free
+  vars:
+    archive: "sapart.zip"
+  tasks:  
+  - name: Get the archive from Master
+    win_copy:
+      src: "{{ dest_sendedapi }}{{ archive }}"
+      dest: "{{sendedapi}}/"
+    register: copy_result
+      
+  - name: Get the archive from FTP if Master failed
+    win_get_url:
+      url: "{{ ftp_url_releases }}{{ archive }}"
+      dest: "{{sendedapi}}/" 
+      url_username: "{{ ftp_username }}"
+      url_password: "{{ ftp_password }}"
+    when: copy_result is failed
+
+  - name: Unpacking an archive and then deleting it
+    win_unzip:
+      src: "{{sendedapi}}/{{ archive }}"
+      dest: "{{sendedapi}}"
+      delete_archive: yes
+    retries: 10
+    delay: 2
+    register: result
+    until: result is not failed 
+      
+  - name: Running a script for database changes
+    win_shell: "{{sendedapi}}/sql/script.bat"
+    args:
+      chdir: "{{sendedapi}}/sql"
+
+- name: Sendedapi_linux 
+  hosts: hospital_linux
+  gather_facts: false 
+  ignore_errors: yes
+  become: yes
+  vars:
+    archive: "sapart.zip"
+  tasks:  
+  - name: Get the archive from Master
+    ansible.builtin.copy:
+      src: "{{ dest_sendedapi }}{{ archive }}"
+      dest: "{{sendedapi}}/"
+      
+  - name: Unpacking the archive
+    ansible.builtin.unarchive:
+      src: "{{sendedapi}}/{{ archive }}"
+      dest: "{{sendedapi}}"
+      remote_src: yes  # Архив находится на целевом хосте
+      keep_newer: yes
+    
+  - name: Deleting an archive after unpacking
+    ansible.builtin.file:
+      path: "{{ sendedapi }}/{{ archive }}"
+      state: absent

@@ -1,0 +1,91 @@
+---
+- name: Распаковка архива in "{{ www_root }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_2 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_2 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_3 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_3 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_4 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_4 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_5 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_5 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_6 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_6 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_7 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_7 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_8 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_8 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_9 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_9 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_10 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_10 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_11 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_11 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_12 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_12 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_13 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_13 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_14 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_14 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_15 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_15 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_16 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_16 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_17 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_17 }}{{ item.path }}"
+    
+- name: Распаковка архива in "{{ www_root_18 }}{{ item.path }}"
+  win_unzip:
+    src: "{{ ansible }}/{{ item.file }}"
+    dest: "{{ www_root_18 }}{{ item.path }}"
+    delete_archive: yes

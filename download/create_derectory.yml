@@ -1,0 +1,21 @@
+---
+- name: Connecting host files hospital
+  hosts: hospital
+  ignore_errors: yes
+  gather_facts: no
+  strategy: free
+  tasks:
+    - name: Create directory structure
+      win_file:
+        path: '{{ansible}}'
+        state: directory
+
+- name: Connecting host files hospital_FTP
+  hosts: hospital_FTP
+  ignore_errors: yes
+  gather_facts: no
+  tasks:
+    - name: Create directory structure
+      win_file:
+        path: '{{ansible}}'
+        state: directory

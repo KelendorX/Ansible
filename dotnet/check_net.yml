@@ -1,0 +1,24 @@
+---         
+- name: check .net 
+  hosts: hospital
+  gather_facts: false #пропускаем ping всех машин.
+  ignore_errors: yes #если произойдет ошибка во время выполнения задания, то остановки не будет.
+  strategy: free
+  #serial: 1
+  tasks:   
+  - name: Run basic PowerShell script
+    ansible.windows.win_powershell:
+      script: |
+        dotnet --info
+
+- name: check .net 
+  hosts: hospital_FTP
+  gather_facts: false #пропускаем ping всех машин.
+  ignore_errors: yes #если произойдет ошибка во время выполнения задания, то остановки не будет.
+  strategy: free
+  #serial: 1
+  tasks:   
+  - name: Run basic PowerShell script
+    ansible.windows.win_powershell:
+      script: |
+        dotnet --info

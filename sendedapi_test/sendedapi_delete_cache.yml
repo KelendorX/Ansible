@@ -1,0 +1,71 @@
+---
+- name: Sendedapi_IIS
+  hosts: hospital
+  gather_facts: false #пропускаем ping всех машин.
+  ignore_errors: yes #если произойдет ошибка во время выполнения задания, то остановки не будет.
+  strategy: free
+  #serial: 1
+  tasks:   
+  - name: KILL SQLITESTUDIO
+    win_command: taskkill /IM sqlitestudio.exe /F   
+        
+  - name: Stopping the IIS pool
+    win_iis_webapppool:
+      name: sendedapi
+      state: stopped
+
+  - name: Delete cache.db
+    win_file:
+      path: "{{sendedapi}}/cache.db"
+      state: absent
+      
+  - name: Starting the IIS pool
+    win_iis_webapppool:
+      name: sendedapi
+      state: started 
+            
+- name: Sendedapi_service 
+  hosts: hospital_service
+  gather_facts: false 
+  ignore_errors: yes 
+  strategy: free
+  #serial: 1
+  tasks:  
+  - name: KILL SQLITESTUDIO
+    win_command: taskkill /IM sqlitestudio.exe /F   
+
+  - name: Service stop
+    win_service:
+      name: "{{ service_name | default('sendedapi') }}"
+      state: stopped
+
+  - name: Delete cache.db
+    win_file:
+      path: "{{sendedapi}}/cache.db"
+      state: absent
+      
+  - name: Service startup
+    win_service:
+      name: "{{ service_name | default('sendedapi') }}"
+      state: started
+      
+- name: Sendedapi_linux 
+  hosts: hospital_linux
+  gather_facts: false 
+  ignore_errors: yes
+  become: yes 
+  tasks:        
+  - name: Stopped service sendedapi
+    ansible.builtin.service:
+      name: sendedapi.service
+      state: stopped
+    
+  - name: Delete cache.db
+    ansible.builtin.file:
+      path: "{{ sendedapi }}/cache.db"
+      state: absent
+    
+  - name: started service sendedapi
+    ansible.builtin.service:
+      name: sendedapi.service
+      state: started
