@@ -1,0 +1,108 @@
+---
+- name: Count .req and .bad files and send to Telegram
+  hosts: hospital_lis
+  gather_facts: no
+  tasks:
+    - name: Check host availability with timeout
+      wait_for_connection:
+        timeout: 10
+      ignore_errors: yes
+      register: host_check
+      changed_when: false
+
+    - name: Set host availability fact
+      set_fact:
+        host_available: "{{ host_check is success }}"
+      
+    - name: Create unreachable message
+      set_fact:
+        telegram_message: |
+          ⚠️ Точка #{{ inventory_hostname }} недоступна!
+          Проверьте соединение с сервером.
+      when: not host_available
+
+    - name: Process available hosts
+      block:
+ 
+        - name: Checking for process presence OdliSendResults.exe
+          win_shell: tasklist | findstr OdliSendResults.exe
+          register: process_check
+          ignore_errors: yes
+          changed_when: false
+
+        - name: Stopping the process OdliSendResults.exe (if it is running)
+          win_command: taskkill /IM OdliSendResults.exe /F
+          when: process_check.rc == 0
+          ignore_errors: yes
+                    
+        - name: Checking for process presence OdliMakeOrders.exe
+          win_shell: tasklist | findstr OdliMakeOrders.exe
+          register: process_check
+          ignore_errors: yes
+          changed_when: false
+
+        - name: Stopping the process OdliMakeOrders.exe (if it is running)
+          win_command: taskkill /IM OdliMakeOrders.exe /F
+          when: process_check.rc == 0
+          ignore_errors: yes
+          
+        - name: Find .req files in lis_1 directory
+          win_find:
+            paths: "{{ lis_1 }}"
+            patterns: ['statcgi_*.req']
+            get_checksum: false
+          register: req_files_lis_1
+            
+        - name: Find .bad files in lis_1 directory
+          win_find:
+            paths: "{{ lis_1 }}"
+            patterns: ['statcgi_*.bad']
+            get_checksum: false
+          register: bad_files_lis_1
+
+        - name: Find .req files in lis_2 directory (if exists)
+          win_find:
+            paths: "{{ lis_2 | default('') }}"
+            patterns: ['statcgi_*.req']
+            get_checksum: false
+          when: lis_2 is defined
+          register: req_files_lis_2
+
+        - name: Find .bad files in lis_2 directory (if exists)
+          win_find:
+            paths: "{{ lis_2 | default('') }}"
+            patterns: ['statcgi_*.bad']
+            get_checksum: false
+          when: lis_2 is defined
+          register: bad_files_lis_2
+
+        - name: Prepare message for available host
+          set_fact:
+            telegram_message: |
+              {% macro format_number(number) -%}
+                {% if number > 0 %}<b>️ {{ number }} ⚠️</b>{% else %}<b>{{ number }}</b>{% endif %}
+              {%- endmacro %}
+              
+              Точка: #{{ inventory_hostname }}
+              ������Путь: {{ lis_1 }}
+              ✅Количество .req файлов: {{ format_number(req_files_lis_1.files | length) }}
+              ❌Количество .bad файлов: {{ format_number(bad_files_lis_1.files | length) }}
+              
+              {% if lis_2 is defined %}
+              Точка: #{{ inventory_hostname }}
+              ������Путь: {{ lis_2 }}
+              ✅Количество .req файлов: {{ format_number(req_files_lis_2.files | length) }}
+              ❌Количество .bad файлов: {{ format_number(bad_files_lis_2.files | length) }}
+              {% endif %}
+      when: host_available
+
+    - name: Send notification to Telegram
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: "{{ telegram_message }}"
+          parse_mode: "HTML"
+      delegate_to: localhost
