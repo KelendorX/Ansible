@@ -1,0 +1,98 @@
+---
+- name: Updating directories using loadterm_oid
+  hosts: localhost
+  gather_facts: no
+  vars:
+    loadterm_exe: "/root/reference_books/loadterm_oid"
+    loadterm_path: "/root/reference_books/"
+    files: "/root/ansible/download/files/"
+    exclude_files: "loadterm.json"
+    archive_name: "oid.zip"
+    # Список OID параметров
+    oid_parameters:
+      - "1.2.643.5.1.13.13.99.2.611"
+      - "1.2.643.5.1.13.13.99.2.797"
+      - "1.2.643.5.1.13.13.11.1070"
+      - "1.2.643.5.1.13.13.11.1080"
+      - "1.2.643.5.1.13.13.11.1437"
+  
+  tasks:    
+    - name: Running loadterm_oid with parameters
+      command: "{{ loadterm_exe }} {{ item }}"
+      args:
+        chdir: "{{ loadterm_path }}"  # запуск из директории loadterm_oid
+      loop: "{{ oid_parameters }}"
+      
+    - name: Find all downloaded files (except loadterm.json)
+      find:
+        paths: "{{ loadterm_path }}"
+        patterns: "*.json"
+        excludes: "{{ exclude_files }}"
+        file_type: file
+        recurse: no  # только в текущей директории, без поддиректорий
+      register: downloaded_files
+      
+    - name: Collect a list of file paths
+      set_fact:
+        file_paths: "{{ downloaded_files.files | map(attribute='path') | list }}"
+      when: downloaded_files.files | length > 0
+            
+    - name: Create one archive with all files
+      archive:
+        path: "{{ file_paths }}"
+        dest: "{{ files }}{{ archive_name }}"
+        format: zip
+        remove: true
+      when: file_paths is defined and file_paths | length > 0
+      
+    - name: Copy the archive to FTP using curl
+      shell: |
+        curl -T "{{ files }}{{ archive_name }}" "{{ ftp_url_master }}"
+      args:
+        executable: /bin/bash
+                
+- name: Connecting host files hospital
+  hosts: hospital
+  ignore_errors: yes
+  gather_facts: no
+  strategy: free
+  vars:
+    archive: "oid.zip"
+  tasks:
+   - name: Download the archive in {{ansible}}
+     win_copy:
+       src: "{{ dest_download }}{{ archive }}"
+       dest: "{{ ansible }}/"
+       
+   - include: '/root/ansible/download/Hosts_arx/{{inventory_hostname}}.yml'
+     with_items:
+      - {path: '/json/', dest: '/json/oid.zip', file: 'oid.zip'}
+   
+- name: Connecting host files hospital_FTP
+  hosts: hospital_FTP
+  ignore_errors: yes
+  gather_facts: no
+  vars:
+    archive: "oid.zip"
+  tasks:
+   - name: Download the archive in {{ansible}}
+     win_get_url:
+       url: "{{ ftp_url }}{{ archive }}"
+       dest: "{{ ansible }}/"
+       url_username: "{{ ftp_username }}"
+       url_password: "{{ ftp_password }}"
+       
+   - include: '/root/ansible/download/Hosts_arx/{{inventory_hostname}}.yml'
+     with_items:
+      - {path: '/json/', dest: '/json/oid.zip', file: 'oid.zip'}
+
+- name: Deleting a file on a local machine
+  hosts: localhost
+  gather_facts: false
+  vars:
+    archive: "oid.zip"
+  tasks:
+    - name: Delete the file
+      file:
+        path: "{{ dest_download }}{{ archive }}"
+        state: absent
